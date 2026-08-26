@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英語対話フレーズ学習（目隠し機能）</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sub: #555555;
+            --you-color: #2b6cb0;
+            --you-bg: #ebf8ff;
+            --friend-color: #c05621;
+            --friend-bg: #feebc8;
+            --mask-color: #2d3748;
+            --border-color: #e2e8f0;
+            --btn-primary: #3182ce;
+            --btn-hover: #2b6cb0;
+            --btn-audio: #38a169;
+            --btn-audio-hover: #2f855a;
+            --btn-stop: #e53e3e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー・操作パネル */
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-label {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            font-weight: bold;
+            margin-right: 2px;
+            margin-left: 6px;
+        }
+
+        .btn-label:first-child {
+            margin-left: 0;
+        }
+
+        button {
+            padding: 5px 12px;
+            font-size: 0.82rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-mask {
+            background-color: var(--btn-primary);
+            color: white;
+        }
+        .btn-mask:hover {
+            background-color: var(--btn-hover);
+        }
+
+        .btn-reset {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        .btn-reset:hover {
+            background-color: #cbd5e0;
+        }
+
+        /* 音声再生用ボタン */
+        .btn-audio {
+            background-color: var(--btn-audio);
+            color: white;
+        }
+        .btn-audio:hover {
+            background-color: var(--btn-audio-hover);
+        }
+
+        .btn-stop {
+            background-color: var(--btn-stop);
+            color: white;
+        }
+        .btn-stop:hover {
+            background-color: #c53030;
+        }
+
+        /* 対話リスト */
+        .dialogue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* 対話1行のレイアウト */
+        .dialogue-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        /* 再生中のハイライト表示 */
+        .dialogue-row.playing .content-box {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+            background-color: #f7fafc;
+        }
+
+        /* 枠外のロール表示 */
+        .role-badge {
+            width: 70px;
+            flex-shrink: 0;
+            text-align: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .role-you {
+            background-color: var(--you-bg);
+            color: var(--you-color);
+            border: 1px solid #bee3f8;
+        }
+
+        .role-friend {
+            background-color: var(--friend-bg);
+            color: var(--friend-color);
+            border: 1px solid #fbd38d;
+        }
+
+        .role-empty {
+            visibility: hidden;
+        }
+
+        /* 英語と日本語を横並びにするコンテンツ枠 */
+        .content-box {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background-color: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.2s;
+        }
+
+        /* 英語テキスト */
+        .english-col {
+            font-size: 1rem;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* 日本語テキスト */
+        .japanese-col {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            border-left: 2px solid #edf2f7;
+            padding-left: 12px;
+            line-height: 1.4;
+        }
+
+        /* 単語と目隠し（マスク） */
+        .word {
+            display: inline-block;
+            padding: 1px 3px;
+            margin: 0 1px;
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .word:hover {
+            background-color: #ebf8ff;
+        }
+
+        .word.masked {
+            background-color: var(--mask-color);
+            color: transparent;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 640px) {
+            .header-panel {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .content-box {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            .japanese-col {
+                border-left: none;
+                padding-left: 0;
+                font-size: 0.85rem;
+            }
+            .role-badge {
+                width: 55px;
+                font-size: 0.7rem;
+                padding: 3px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- ヘッダー -->
+    <div class="header-panel">
+        <h1>P79 友達の家で（フレーズ学習）</h1>
+        <div class="btn-group">
+            <span class="btn-label">目隠し:</span>
+            <button class="btn-mask" onclick="maskRandomPercent(0.30)">30%</button>
+            <button class="btn-mask" onclick="maskRandomPercent(0.60)">60%</button>
+            <button class="btn-mask" onclick="maskRandomPercent(0.80)">80%</button>
+            <button class="btn-mask" onclick="maskRandomPercent(1.00)">100%</button>
+            <button class="btn-reset" onclick="resetMasks()">🔓 全て解除</button>
+            
+            <span class="btn-label">音声:</span>
+            <button class="btn-audio" onclick="startAudioSequence('continuous')">▶ 連続</button>
+            <button class="btn-audio" onclick="startAudioSequence('repeat')">🔁 リピート</button>
+            <button class="btn-stop" onclick="stopAudio()">■ 停止</button>
+        </div>
+    </div>
+
+    <!-- 対話リスト -->
+    <div id="dialogueList" class="dialogue-list"></div>
+</div>
+
+<script>
+const dialogueData = [
+    { role: "You", english: "Oh, it’s hot in this room.", japanese: "わあ、この部屋は暑いね。" },
+    { role: "", english: "Can I open the window?", japanese: "窓を開けてもいいかな。" },
+    { role: "Friend", english: "Sure.", japanese: "もちろん。" },
+    { role: "", english: "No problem.", japanese: "だいじょうぶだよ。" },
+    { role: "You", english: "It’s a little dark.", japanese: "少し暗いね。" },
+    { role: "", english: "Can I turn on the lights?", japanese: "明かりをつけてもいいかな。" },
+    { role: "Friend", english: "Sure.", japanese: "もちろん。" },
+    { role: "You", english: "And, . . . can you help me with my homework?", japanese: "それから…ぼくの宿題を手伝ってくれるかな。" },
+    { role: "Friend", english: "All right.", japanese: "わかった。" },
+    { role: "", english: "Just a moment.", japanese: "ちょっと待ってて。" }
+];
+
+let isPlaying = false;
+let currentTimeoutId = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+    renderDialogue();
+    maskRandomPercent(0.30);
+});
+
+function renderDialogue() {
+    const listContainer = document.getElementById('dialogueList');
+    listContainer.innerHTML = '';
+
+    dialogueData.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'dialogue-row';
+        row.id = `dialogue-row-${index}`;
+
+        const roleBadge = document.createElement('div');
+        const roleText = item.role ? item.role.trim() : '';
+
+        if (roleText) {
+            const isFriend = roleText.toLowerCase().includes('friend');
+            roleBadge.className = `role-badge ${isFriend ? 'role-friend' : 'role-you'}`;
+            roleBadge.textContent = roleText;
+        } else {
+            roleBadge.className = 'role-badge role-empty';
+        }
+
+        const contentBox = document.createElement('div');
+        contentBox.className = 'content-box';
+
+        const englishCol = document.createElement('div');
+        englishCol.className = 'english-col';
+
+        const wordRegex = /[a-zA-Z0-9]+(?:['’][a-zA-Z0-9]+)*/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = wordRegex.exec(item.english)) !== null) {
+            if (match.index > lastIndex) {
+                const nonWordText = item.english.substring(lastIndex, match.index);
+                englishCol.appendChild(document.createTextNode(nonWordText));
+            }
+
+            const wordText = match[0];
+            const wordSpan = document.createElement('span');
+            wordSpan.className = 'word';
+            wordSpan.textContent = wordText;
+
+            wordSpan.addEventListener('click', () => {
+                wordSpan.classList.toggle('masked');
+            });
+
+            englishCol.appendChild(wordSpan);
+            lastIndex = wordRegex.lastIndex;
+        }
+
+        if (lastIndex < item.english.length) {
+            const remainingText = item.english.substring(lastIndex);
+            englishCol.appendChild(document.createTextNode(remainingText));
+        }
+
+        const japaneseCol = document.createElement('div');
+        japaneseCol.className = 'japanese-col';
+        japaneseCol.textContent = item.japanese;
+
+        contentBox.appendChild(englishCol);
+        contentBox.appendChild(japaneseCol);
+
+        row.appendChild(roleBadge);
+        row.appendChild(contentBox);
+
+        listContainer.appendChild(row);
+    });
+}
+
+function maskRandomPercent(ratio) {
+    resetMasks();
+    const allWords = Array.from(document.querySelectorAll('.word'));
+    if (allWords.length === 0) return;
+
+    const targetCount = Math.round(allWords.length * ratio);
+
+    const shuffled = [...allWords].sort(() => 0.5 - Math.random());
+    for (let i = 0; i < Math.min(targetCount, allWords.length); i++) {
+        shuffled[i].classList.add('masked');
+    }
+}
+
+function resetMasks() {
+    const maskedWords = document.querySelectorAll('.word.masked');
+    maskedWords.forEach(word => word.classList.remove('masked'));
+}
+
+/* ================= 音声再生機能 ================= */
+
+// 音声機能の開始（連続 / リピート）
+function startAudioSequence(mode) {
+    if (!('speechSynthesis' in window)) {
+        alert('お使いのブラウザは音声読み上げに対応していません。');
+        return;
+    }
+    stopAudio(); // 実行中の再生があればクリア
+    isPlaying = true;
+    playNextSentence(0, mode);
+}
+
+// 1文ずつ再生処理
+function playNextSentence(index, mode) {
+    if (!isPlaying || index >= dialogueData.length) {
+        stopAudio();
+        return;
+    }
+
+    // 全ての行のハイライトを解除し、現在の行にハイライト付与
+    document.querySelectorAll('.dialogue-row').forEach(row => row.classList.remove('playing'));
+    const currentRow = document.getElementById(`dialogue-row-${index}`);
+    if (currentRow) {
+        currentRow.classList.add('playing');
+        currentRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    const text = dialogueData[index].english;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.85; // 読み上げ速度
+
+    // 読み上げ終了時の処理
+    utterance.onend = () => {
+        if (!isPlaying) return;
+
+        if (mode === 'repeat') {
+            // リピートモード：文字数に応じたポーズ時間を計算（1文字あたり130ms ＋ 最小1.5秒保証）
+            const pauseDuration = Math.max(1500, text.length * 130);
+            currentTimeoutId = setTimeout(() => {
+                playNextSentence(index + 1, mode);
+            }, pauseDuration);
+        } else {
+            // 連続モード：文間にわずかな間隔（300ms）を置いて次へ
+            currentTimeoutId = setTimeout(() => {
+                playNextSentence(index + 1, mode);
+            }, 300);
+        }
+    };
+
+    utterance.onerror = () => {
+        stopAudio();
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+// 音声再生の停止
+function stopAudio() {
+    isPlaying = false;
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    if (currentTimeoutId) {
+        clearTimeout(currentTimeoutId);
+        currentTimeoutId = null;
+    }
+    document.querySelectorAll('.dialogue-row').forEach(row => row.classList.remove('playing'));
+}
+</script>
+
+</body>
+</html>
